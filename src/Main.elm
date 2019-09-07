@@ -2,7 +2,7 @@ port module Main exposing (Message(..), Model, init, main, subscriptions, update
 
 import Browser
 import Html exposing (Html, audio, button, div, h1, img, p, source, span, text)
-import Html.Attributes exposing (autoplay, controls, src)
+import Html.Attributes exposing (autoplay, src)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Time
@@ -39,6 +39,7 @@ init =
 type Message
     = Beat Time.Posix
     | StartClick
+    | StopClick
 
 
 type Läge
@@ -48,11 +49,19 @@ type Läge
 
 
 träningstid =
-    10000
+    60 * 1000
 
 
 vilotid =
-    5000
+    10 * 1000
+
+
+startLabel =
+    "start"
+
+
+bytStationLabel =
+    "bytstation"
 
 
 update : Message -> Model -> ( Model, Cmd Message )
@@ -69,7 +78,10 @@ update message model =
             ( { model | now = now, läge = nyttLäge, startTid = nyStartTid }, cmd )
 
         StartClick ->
-            ( { model | startTid = model.now, läge = Träning }, Cmd.none )
+            ( { model | startTid = model.now, läge = Träning }, audioplay (Encode.string startLabel) )
+
+        StopClick ->
+            ( { model | startTid = model.now, läge = InnanStart }, Cmd.none )
 
 
 beräknaNyttLäge : Läge -> Time.Posix -> Time.Posix -> ( Läge, Cmd msg )
@@ -80,14 +92,14 @@ beräknaNyttLäge läge now start =
 
         Träning ->
             if (Time.posixToMillis now - Time.posixToMillis start) > träningstid then
-                ( Vila, audioplay (Encode.string "bytstation") )
+                ( Vila, audioplay (Encode.string bytStationLabel) )
 
             else
                 ( Träning, Cmd.none )
 
         Vila ->
             if (Time.posixToMillis now - Time.posixToMillis start) > vilotid then
-                ( Träning, audioplay (Encode.string "start") )
+                ( Träning, audioplay (Encode.string startLabel) )
 
             else
                 ( Vila, Cmd.none )
@@ -122,14 +134,22 @@ view : Model -> Html Message
 view model =
     div []
         [ img [ src "/logo.svg" ] []
-        , h1 [] [ text "Förfluten tid" ]
-        , p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
-        , button [ onClick StartClick ] [ text "Start" ]
+        , h1 [] [ text "Cirkelträning" ]
+        , if model.läge /= InnanStart then
+            p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
+
+          else
+            p [] [ text "Tryck start för att börja träna." ]
+        , if model.läge == InnanStart then
+            button [ onClick StartClick ] [ text "Start" ]
+
+          else
+            button [ onClick StopClick ] [ text "Stopp" ]
         , p [] [ text <| lägeTillText model.läge ]
-        , audio [ Html.Attributes.id "bytstation" ]
+        , audio [ Html.Attributes.id bytStationLabel ]
             [ source [ src "bytstation.m4a" ] []
             ]
-        , audio [ Html.Attributes.id "start" ]
+        , audio [ Html.Attributes.id startLabel ]
             [ source [ src "start.m4a" ] []
             ]
         ]
@@ -174,7 +194,7 @@ ljud ljudfil =
 
 subscriptions : Model -> Sub Message
 subscriptions _ =
-    Time.every 1000 Beat
+    Time.every 500 Beat
 
 
 
