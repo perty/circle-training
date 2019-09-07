@@ -1,10 +1,14 @@
-module Main exposing (Message(..), Model, init, main, subscriptions, update, view)
+port module Main exposing (Message(..), Model, init, main, subscriptions, update, view)
 
 import Browser
-import Html exposing (Html, button, div, h1, img, p, text)
-import Html.Attributes exposing (src)
+import Html exposing (Html, audio, button, div, h1, img, p, source, span, text)
+import Html.Attributes exposing (autoplay, controls, src)
 import Html.Events exposing (onClick)
+import Json.Encode as Encode
 import Time
+
+
+port audioplay : Encode.Value -> Cmd msg
 
 
 
@@ -43,42 +47,50 @@ type Läge
     | Vila
 
 
+träningstid =
+    10000
+
+
+vilotid =
+    5000
+
+
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
         Beat now ->
             let
-                nyttLäge =
+                ( nyttLäge, cmd ) =
                     beräknaNyttLäge model.läge model.now model.startTid
 
                 nyStartTid =
                     beräknaNyStartTid model.läge model.now model.startTid
             in
-            ( { model | now = now, läge = nyttLäge, startTid = nyStartTid }, Cmd.none )
+            ( { model | now = now, läge = nyttLäge, startTid = nyStartTid }, cmd )
 
         StartClick ->
             ( { model | startTid = model.now, läge = Träning }, Cmd.none )
 
 
-beräknaNyttLäge : Läge -> Time.Posix -> Time.Posix -> Läge
+beräknaNyttLäge : Läge -> Time.Posix -> Time.Posix -> ( Läge, Cmd msg )
 beräknaNyttLäge läge now start =
     case läge of
         InnanStart ->
-            InnanStart
+            ( InnanStart, Cmd.none )
 
         Träning ->
-            if (Time.posixToMillis now - Time.posixToMillis start) > 60000 then
-                Vila
+            if (Time.posixToMillis now - Time.posixToMillis start) > träningstid then
+                ( Vila, audioplay (Encode.string "bytstation") )
 
             else
-                Träning
+                ( Träning, Cmd.none )
 
         Vila ->
-            if (Time.posixToMillis now - Time.posixToMillis start) > 10000 then
-                Träning
+            if (Time.posixToMillis now - Time.posixToMillis start) > vilotid then
+                ( Träning, audioplay (Encode.string "start") )
 
             else
-                Vila
+                ( Vila, Cmd.none )
 
 
 beräknaNyStartTid : Läge -> Time.Posix -> Time.Posix -> Time.Posix
@@ -88,14 +100,14 @@ beräknaNyStartTid läge now start =
             start
 
         Träning ->
-            if (Time.posixToMillis now - Time.posixToMillis start) > 60000 then
+            if (Time.posixToMillis now - Time.posixToMillis start) > träningstid then
                 now
 
             else
                 start
 
         Vila ->
-            if (Time.posixToMillis now - Time.posixToMillis start) > 10000 then
+            if (Time.posixToMillis now - Time.posixToMillis start) > vilotid then
                 now
 
             else
@@ -114,6 +126,12 @@ view model =
         , p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
         , button [ onClick StartClick ] [ text "Start" ]
         , p [] [ text <| lägeTillText model.läge ]
+        , audio [ Html.Attributes.id "bytstation" ]
+            [ source [ src "bytstation.m4a" ] []
+            ]
+        , audio [ Html.Attributes.id "start" ]
+            [ source [ src "start.m4a" ] []
+            ]
         ]
 
 
@@ -128,6 +146,26 @@ lägeTillText läge =
 
         Vila ->
             "Vila."
+
+
+ljudBaseratPåLäge : Läge -> Html Message
+ljudBaseratPåLäge läge =
+    case läge of
+        InnanStart ->
+            span [] []
+
+        Träning ->
+            ljud "start.m4a"
+
+        Vila ->
+            ljud "bytstation.m4a"
+
+
+ljud : String -> Html Message
+ljud ljudfil =
+    audio [ autoplay True ]
+        [ source [ src ljudfil ] []
+        ]
 
 
 
