@@ -133,7 +133,7 @@ beräknaNyStartTid läge now start =
 view : Model -> Html Message
 view model =
     div []
-        [ img [ src "/logo.svg" ] []
+        [ img [ src "%PUBLIC_URL%/logo.svg" ] []
         , h1 [] [ text "Cirkelträning" ]
         , if model.läge /= InnanStart then
             p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
