@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-elm-app build
+PUBLIC_URL=/circle-training/ elm-app build
 cp -R build/* docs
