@@ -1,9 +1,9 @@
 port module Main exposing (Message(..), Model, init, main, subscriptions, update, view)
 
 import Browser
-import Html exposing (Html, audio, button, div, h1, img, p, source, text)
-import Html.Attributes exposing (src)
-import Html.Events exposing (onClick)
+import Html exposing (Html, audio, button, div, h1, img, input, label, p, source, text)
+import Html.Attributes exposing (src, style, type_, value)
+import Html.Events exposing (onClick, onInput)
 import Json.Encode as Encode
 import Time
 
@@ -19,6 +19,7 @@ type alias Model =
     { now : Time.Posix
     , startTid : Time.Posix
     , läge : Läge
+    , aktivTid : Int
     }
 
 
@@ -27,6 +28,7 @@ init =
     ( { now = Time.millisToPosix 0
       , startTid = Time.millisToPosix 0
       , läge = InnanStart
+      , aktivTid = 60
       }
     , Cmd.none
     )
@@ -40,6 +42,7 @@ type Message
     = Beat Time.Posix
     | StartClick
     | StopClick
+    | AktivTid String
 
 
 type Läge
@@ -82,6 +85,18 @@ update message model =
 
         StopClick ->
             ( { model | startTid = model.now, läge = InnanStart }, Cmd.none )
+
+        AktivTid nyTidStr ->
+            let
+                nyTid =
+                    case String.toInt nyTidStr of
+                        Just n ->
+                            n
+
+                        Nothing ->
+                            model.aktivTid
+            in
+            ( { model | aktivTid = nyTid }, Cmd.none )
 
 
 beräknaNyttLäge : Läge -> Time.Posix -> Time.Posix -> ( Läge, Cmd msg )
@@ -159,10 +174,19 @@ view model =
             audio [ Html.Attributes.id startLabel ]
                 [ source [ src "start.m4a" ] []
                 ]
+
+        inställningar =
+            div [ style "display" "flex", style "flex-direction" "row", style "width" "100%", style "justify-content" "center" ]
+                [ label [] [ text "Aktiv tid" ]
+                , input [ onInput AktivTid, value <| String.fromInt model.aktivTid, type_ "number" ] []
+                , label [] [ text "Vilotid" ]
+                , input [] []
+                ]
     in
     div []
         [ img [ src "%PUBLIC_URL%/logotype.png" ] []
         , h1 [] [ text "Cirkelträning" ]
+        , inställningar
         , huvud
         , startStoppKnapp
         , lägesText
