@@ -1,8 +1,8 @@
 port module Main exposing (Message(..), Model, init, main, subscriptions, update, view)
 
 import Browser
-import Html exposing (Html, audio, button, div, h1, img, p, source, span, text)
-import Html.Attributes exposing (autoplay, src)
+import Html exposing (Html, audio, button, div, h1, img, p, source, text)
+import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
 import Json.Encode as Encode
 import Time
@@ -132,26 +132,42 @@ beräknaNyStartTid läge now start =
 
 view : Model -> Html Message
 view model =
+    let
+        huvud =
+            if model.läge /= InnanStart then
+                p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
+
+            else
+                p [] [ text "Tryck start för att börja träna." ]
+
+        startStoppKnapp =
+            if model.läge == InnanStart then
+                button [ onClick StartClick ] [ text "Start" ]
+
+            else
+                button [ onClick StopClick ] [ text "Stopp" ]
+
+        lägesText =
+            p [] [ text <| lägeTillText model.läge ]
+
+        bytStationLjud =
+            audio [ Html.Attributes.id bytStationLabel ]
+                [ source [ src "bytstation.m4a" ] []
+                ]
+
+        startLjud =
+            audio [ Html.Attributes.id startLabel ]
+                [ source [ src "start.m4a" ] []
+                ]
+    in
     div []
-        [ img [ src "%PUBLIC_URL%/logo.svg" ] []
+        [ img [ src "%PUBLIC_URL%/logotype.png" ] []
         , h1 [] [ text "Cirkelträning" ]
-        , if model.läge /= InnanStart then
-            p [] [ text <| String.fromInt <| (Time.posixToMillis model.now - Time.posixToMillis model.startTid) // 1000 ]
-
-          else
-            p [] [ text "Tryck start för att börja träna." ]
-        , if model.läge == InnanStart then
-            button [ onClick StartClick ] [ text "Start" ]
-
-          else
-            button [ onClick StopClick ] [ text "Stopp" ]
-        , p [] [ text <| lägeTillText model.läge ]
-        , audio [ Html.Attributes.id bytStationLabel ]
-            [ source [ src "bytstation.m4a" ] []
-            ]
-        , audio [ Html.Attributes.id startLabel ]
-            [ source [ src "start.m4a" ] []
-            ]
+        , huvud
+        , startStoppKnapp
+        , lägesText
+        , bytStationLjud
+        , startLjud
         ]
 
 
@@ -166,26 +182,6 @@ lägeTillText läge =
 
         Vila ->
             "Vila."
-
-
-ljudBaseratPåLäge : Läge -> Html Message
-ljudBaseratPåLäge läge =
-    case läge of
-        InnanStart ->
-            span [] []
-
-        Träning ->
-            ljud "start.m4a"
-
-        Vila ->
-            ljud "bytstation.m4a"
-
-
-ljud : String -> Html Message
-ljud ljudfil =
-    audio [ autoplay True ]
-        [ source [ src ljudfil ] []
-        ]
 
 
 
